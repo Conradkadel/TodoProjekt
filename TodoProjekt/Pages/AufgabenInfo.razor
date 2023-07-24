@@ -1,0 +1,266 @@
+﻿@using Services
+@inject IUnteraufgabenServices unteraufgabenServices
+@inject IAufgabenServices aufgabenServices
+@using Models
+@using Microsoft.JSInterop
+@using Syncfusion.Blazor.ProgressBar
+
+<style>
+
+    #left
+    {
+        width:30%;
+        
+        border-right:2px solid black;
+        display:flex;
+        flex-direction:column;
+        justify-content:space-evenly;
+        align-items:center;
+
+
+    }
+    #innerLeft
+    {
+        border:2px ridge black;
+        border-radius: 15px;
+        box-shadow: 2px 2px 2px black;
+        width:80%;
+    }
+
+    #rechts{
+        width:70%;
+        max-width:1200px;
+        display: flex;
+        flex-direction: row;
+
+    }
+    #unterAufgabe{
+        
+        
+        margin:0vh -53vh 0vh 2vh;
+        display:flex;
+        flex-direction:column;
+        width:15%;
+    }
+    
+
+    #formUnteraufgabe{
+        width:50%;
+        padding: 2vh;
+        margin-right:-12vh;
+        display: flex;
+        flex-direction: row;
+        align-items:center;
+        padding-left: 5vw;
+    }
+
+    #unteraufgabeEinzelnd{
+        
+       border:2px solid black;
+        background-color: lightgrey;
+        width:300%;
+        display:flex;
+        flex-direction:row;
+        justify-content:space-evenly
+
+    }
+    #box{
+        
+        max-width: 1611px;
+        background-color: dimgrey;
+        padding-bottom:0;
+        margin-bottom:0;
+        height: 150%;
+        display: flex;
+        flex-direction: row;
+        width: 1000%;
+        justify-content: space-around;
+        
+    }
+
+    #widht
+    {
+        width:50%;
+    }
+</style>
+<div id="box">
+@foreach (var aufgabe in aufgabeList)
+{
+    if (aufgabe.Id == userId)
+    {
+        <div id="left">
+            <div id="innerLeft">
+                <p style="text-align:center; width:100%;">
+                     @aufgabe.Prozentsatz %
+                    <SfProgressBar Value="@progressValue" Minimum="0" Maximum="100" Width="300" TrackThickness="12" ProgressThickness="12">
+                    </SfProgressBar>
+                </p>
+            <p style="text-align:center;">Erstellt am @aufgabe.ErstellDatum</p>
+            <p style ="text-align:center;"> @aufgabe.status</p>
+                </div>
+        </div>
+
+        <div id="rechts">
+            <div id="formUnteraufgabe">
+            <EditForm Model="unteraufgabe" OnValidSubmit="Save">
+                <div class="form-group">
+                    <label for="Name">Name der Unteraufgabe</label>
+                    <InputText class="form-control" @bind-Value="unteraufgabe.Name" />
+                    <ValidationMessage For="(()=>unteraufgabe.Name)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="Beschreibung">Bis wann?</label>
+                            <InputDate class="form-control" @bind-Value="unteraufgabe.BearbeitungsDatum" />
+                    <ValidationMessage For="(()=>unteraufgabe.BearbeitungsDatum)" />
+                </div>
+
+                <div class="my-2">
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+
+            </EditForm>
+            </div>
+                <table id="widht" class="table table-active">
+            
+
+            
+                <tbody style="width:120%;">
+                @foreach (var unterAufgabe in unteraufgabenListe)
+                {
+                        
+                        @if(unterAufgabe.EinzelAufgabenId == aufgabe.Id)
+                        {
+
+                                <tr>
+
+                                    <td  style="padding-right:3vw;"><Syncfusion.Blazor.Buttons.SfCheckBox CssClass="e-align" Checked="unterAufgabe.Checked" @onclick="()=> updateCheck(aufgabe, unterAufgabe)"></Syncfusion.Blazor.Buttons.SfCheckBox></td>
+                                    <td><p>@unterAufgabe.Name</p></td>
+                                    <td ><p>@unterAufgabe.BearbeitungsDatum.ToShortDateString()</p></td>
+                                    <td style="padding-left:3vw;"><a class="btn btn-danger" style="border-radius:50%;" @onclick="async ()=> await Delete(unterAufgabe)">X</a></td>
+                            
+                            </tr>
+                        
+                        }
+                       
+                }
+                </tbody>
+                
+            
+           </table>
+        </div>
+        
+        }
+        
+ }
+ </div>
+
+
+
+@code {
+    private List<Models.EinzelAufgabe> aufgabeList = new();
+    private List<Models.UnterAufgabe> unteraufgabenListe = new();
+    Models.UnterAufgabe unteraufgabe = new();
+
+
+    [Parameter]
+    public int userId { get; set; }
+
+    public int progressValue { get; set; }
+
+
+    private int numChecked { get; set; }
+    private int numTotal { get; set; }
+
+
+    private void updateCheck(EinzelAufgabe aufgabe, UnterAufgabe unterAufgabe)
+    { 
+        numTotal = 0;
+        numChecked = 0;
+        if (unterAufgabe.Checked == true)
+        {
+            unterAufgabe.Checked = false;
+        }
+        else
+        {
+            unterAufgabe.Checked = true;
+        }
+
+        foreach (var unteraufgaben in unteraufgabenListe)
+        {
+
+            if (unteraufgaben.EinzelAufgabenId == aufgabe.Id)
+            {
+
+                if(unteraufgaben.Checked == true)
+                {
+                    numChecked++;
+                }
+                numTotal++;
+            }
+
+
+        }
+
+        progressValue = numChecked * 100 / numTotal;
+        aufgabe.Prozentsatz = progressValue;
+        StateHasChanged();
+        
+
+        if(aufgabe.status == Status.Bearbeitung && progressValue == 100)
+        {
+            aufgabe.status = Status.Abgeschlossen;
+        }
+        else
+        {
+            aufgabe.status = Status.Bearbeitung;
+        }
+
+        Update(unterAufgabe);
+
+    }
+
+    // This method will be called on button click.
+    protected void GetAufgaben()
+    {
+        unteraufgabenListe = unteraufgabenServices.GetAll();
+
+    }
+
+
+    private async Task Delete(UnterAufgabe unterAufgabe)
+    {
+
+        if (unteraufgabenServices.Delete(unterAufgabe.Id))
+        {
+            unteraufgabenListe.Remove(unterAufgabe);
+        }
+
+
+    }
+
+    private void Update(UnterAufgabe unterAufgabe)
+    {
+        
+        unteraufgabenServices.AddAufgabe(unterAufgabe, userId);
+
+    }
+    private void Save()
+    {
+        if (unteraufgabenServices.AddAufgabe(unteraufgabe, userId))
+        {
+            unteraufgabenListe.Add(unteraufgabe);
+ 
+            StateHasChanged();
+            unteraufgabe = new();
+        }
+        
+    }
+
+    protected override void OnInitialized()
+    {
+        aufgabeList = aufgabenServices.GetAll();
+        unteraufgabenListe = unteraufgabenServices.GetAll();
+        base.OnInitialized();
+    }
+}

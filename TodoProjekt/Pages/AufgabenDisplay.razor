@@ -1,0 +1,168 @@
+﻿@page "/todoListe"
+@using Services
+@inject IAufgabenServices aufgabenServices
+@using Models
+@using Microsoft.JSInterop
+@inject IJSRuntime js
+@inject IJSRuntime jsRuntime
+
+<PageTitle></PageTitle>
+<style>
+    
+    .col-md-6 {
+     flex: 0 0 auto;
+     width: 80%; 
+    }
+
+    .test{
+        width:100%;
+        opacity: 1;
+    }
+ 
+
+    #tr1{
+        width: 441px;
+        text-align: center;
+        justify-content: center;
+        padding:3vh 0vh;
+        font-size:150%;
+        text-shadow: 1px 2px 2px darkgrey;
+    }
+    #tr2{
+       width:900px;
+       text-align: center;
+       font-size:120%;
+    }
+    .row{
+        
+        padding-bottom:10vh;
+        width: 100%
+    }
+
+    #tableTitle{
+        font-size:120%;
+        text-align:center;
+    }
+
+    #tableTitle:hover
+    {
+       background-color: grey;
+       cursor: pointer;
+    }
+    
+
+</style>
+
+
+<h3>Deine Aufgaben </h3>
+<a href="/aufgabe/add" class="btn btn-outline-dark my-2">Add More</a>
+
+<div class="row">
+    
+        <table class="table table-striped">
+            <thead>
+                <tr>
+               
+                <th id="tableTitle"><a @onclick="()=>sortAlphabet()">Name</a></th>
+                <th id="tableTitle">Beschreibung</th>
+                <th id="tableTitle"><a @onclick="()=>sortDate()">Datum</a></th>
+                <th id="tableTitle"></th>
+                </tr>
+            </thead>
+            @foreach (var aufgabe in aufgabeList)
+            {
+                <tbody>
+                <tr>
+                    <td id="tr1">@aufgabe.Name</td>
+                    <td id="tr2">@aufgabe.Beschreibung</td>
+                    <td style="width:400px; text-align:center;">@aufgabe.BearbeitungsDatum.ToShortDateString()</td>
+                    <td style="width:800px;">
+                        <a href="/aufgabe/edit/@aufgabe.Id" class="btn btn-success">Bearbeiten</a>
+                        <a class="btn btn-danger" @onclick="async ()=> await Delete(aufgabe)">Loschen</a>
+                        <a class="btn btn-info" @onclick="()=>hideAppear(aufgabe.Id)">Information</a>
+                    </td>
+                </tr>
+                    <div class="test" id="appear @aufgabe.Id" style="display:none;"><AufgabenInfo userId="@aufgabe.Id"></AufgabenInfo></div>
+                </tbody>
+               
+            }
+        </table>
+   
+</div>
+
+
+@code {
+    private List<Models.EinzelAufgabe> aufgabeList = new();
+    public int roundName = 0;
+    public int roundDate = 0;
+
+    private async Task Delete(EinzelAufgabe aufgabe)
+    {
+        bool confirmed = await jsRuntime.InvokeAsync<bool>("confirm", "Bist du dir sicher?");
+        if (confirmed)
+        {
+            if(aufgabenServices.Delete(aufgabe.Id))
+            {
+                aufgabeList.Remove(aufgabe);
+            }
+
+        }
+    }
+    private void sortAlphabet()
+    {
+        aufgabeList = aufgabenServices.GetAll();
+
+        if (roundName == 0)
+        {
+            var sorted = aufgabeList.OrderBy(X => X.Name);
+            aufgabeList = sorted.ToList();
+            roundName = 1;
+        }
+        else
+        {
+            var sorted = aufgabeList.OrderByDescending(X => X.Name);
+            aufgabeList = sorted.ToList();
+            roundName = 0;
+        }
+        //for (int i = 0; i < aufgabeList.Count - 1; i++)
+        //{
+        //    int x = aufgabeList[i].Name.CompareTo(aufgabeList[i+1].Name);
+        //    if (x < 0)
+        //    {
+        //        EinzelAufgabe temp = aufgabeList[i];
+        //        aufgabeList[i] = aufgabeList[i+1];
+        //        aufgabeList[i++] = temp;
+        //    }
+        //}
+    }
+    private void sortDate()
+    {
+        aufgabeList = aufgabenServices.GetAll();
+
+        if (roundDate == 0)
+        {
+            var sorted = aufgabeList.OrderBy(X => X.BearbeitungsDatum);
+            aufgabeList = sorted.ToList();
+            roundDate = 1;
+        }
+        else
+        {
+            var sorted = aufgabeList.OrderByDescending(X => X.BearbeitungsDatum);
+            aufgabeList = sorted.ToList();
+            roundDate = 0;
+        }
+    }
+    private async Task hideAppear(int Id)
+    {
+
+        await js.InvokeVoidAsync("hideAppear", Id);
+    }
+
+    protected override void OnInitialized()
+    {
+        aufgabeList = aufgabenServices.GetAll();
+        
+        base.OnInitialized();
+    }
+
+}

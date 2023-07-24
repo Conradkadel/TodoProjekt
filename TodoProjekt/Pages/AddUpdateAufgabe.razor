@@ -1,0 +1,69 @@
+﻿@page "/aufgabe/add"
+@page "/aufgabe/edit/{userId:int}"
+
+@using Services;
+@inject IAufgabenServices einzelaufgabenService
+<PageTitle>@Title</PageTitle>
+
+<h3>@Title</h3>
+<a href="/todoListe" class="btn btn-outline-dark">Show all</a>
+<div class="row">
+    <div class="col-md-6">
+        <EditForm Model="aufgabe" OnValidSubmit="Save">
+            <div class="form-group">
+                <label for="Name">Name</label>
+                <InputText class="form-control" @bind-Value="aufgabe.Name"/>
+                <ValidationMessage For="(()=>aufgabe.Name)"/>
+            </div>
+
+            <div class="form-group">
+                <label for="Beschreibung">Beschreibung</label>
+                <InputText class="form-control" @bind-Value="aufgabe.Beschreibung" />
+                <ValidationMessage For="(()=>aufgabe.Beschreibung)" />
+            </div>
+
+            <div class="form-group">
+                <label for="Datum">Datum</label>
+                <InputDate class="form-control" @bind-Value="aufgabe.BearbeitungsDatum" />
+                <ValidationMessage For="(()=>aufgabe.BearbeitungsDatum)" />
+            </div>
+
+            <div class="my-2">
+                @message
+            </div>
+
+            <div class="my-2">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+
+        </EditForm>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public int UserId { get; set; }
+
+    private string message = string.Empty;
+    Models.EinzelAufgabe aufgabe = new();
+    private string Title = "Aufgabe Hinzufuegen";
+    private void Save()
+    {
+        if (einzelaufgabenService.AddAufgabe(aufgabe))
+        {
+            message = "Gespeichert";
+            aufgabe = new();
+        }
+        else
+        {
+            message = "Nicht Gespeichert";
+        }
+    }
+    protected override void OnInitialized()
+    {
+        if (UserId > 0)
+        {
+            Title = "Aufgabe Bearbeiten";
+        }
+        base.OnInitialized();
+    }
+}
